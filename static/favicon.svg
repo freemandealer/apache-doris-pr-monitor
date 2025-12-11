@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="monitorGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3f87ff" />
+      <stop offset="100%" stop-color="#ad1fff" />
+    </linearGradient>
+  </defs>
+  <rect x="8" y="12" width="48" height="34" rx="6" ry="6" fill="url(#monitorGradient)" />
+  <rect x="14" y="18" width="36" height="22" rx="4" ry="4" fill="rgba(0, 0, 0, 0.25)" />
+  <text x="32" y="33" font-size="14" font-family="'Inter', 'Segoe UI', sans-serif" text-anchor="middle" fill="#ffffff" font-weight="600">PR</text>
+  <rect x="27" y="48" width="10" height="6" rx="2" fill="#cfd8dc" />
+  <rect x="20" y="52" width="24" height="4" rx="2" fill="#90a4ae" />
+</svg>

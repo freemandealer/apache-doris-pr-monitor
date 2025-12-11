@@ -1,0 +1,30 @@
+github:
+  # GitHub Personal Access Token with repo + workflow scopes. Prefer loading from env (e.g. ${GITHUB_TOKEN}).
+  token: "${GITHUB_TOKEN}"
+  api_base: "https://api.github.com"
+  web_base: "https://github.com"
+
+# Multiple user/repo combinations that can be switched from the UI.
+targets:
+  - label: "Freeman @ apache/doris"
+    user: "freemandealer"
+    repos:
+      - "apache/doris"
+      - "apache/doris-expr"
+  - label: "Team Bot Playground"
+    user: "team-ci"
+    repos:
+      - "my-org/playground"
+      - "my-org/experimental"
+
+# Interval (seconds) for refreshing cached PR data per target.
+polling:
+  interval_seconds: 300
+
+server:
+  host: 127.0.0.1
+  port: 8080
+
+# Optional shared secret for protecting the web UI/API; leave empty to disable.
+auth:
+  api_key: ""

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Apache Doris PR Monitor</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
+  <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@2.0.6/css/pico.min.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+
+<body>
+  <main class="container">
+    <header class="app-header">
+      <div>
+        <hgroup>
+          <h1>Apache Doris PR Monitor</h1>
+          <p>Last refreshed: {{ refreshed_at|humantime }}</p>
+        </hgroup>
+      </div>
+      <form method="get" class="target-form">
+        <label>
+          Target
+          <select name="target" onchange="this.form.submit()">
+            {% for target in targets %}
+            <option value="{{ target.label }}" {% if target.label == active_label %}selected{% endif %}>
+              {{ target.label }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit">Refresh</button>
+      </form>
+    </header>
+
+    {% if not pull_requests %}
+    <article class="empty-state">
+      <p>No open pull requests for <strong>{{ active_label }}</strong>.</p>
+    </article>
+    {% else %}
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Repository</th>
+            <th>Title</th>
+            <th>Updated</th>
+            <th>Status</th>
+            <th>Problematic Pipelines</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pr in pull_requests %}
+          <tr>
+            <td><a href="{{ pr.url }}" target="_blank">#{{ pr.number }}</a></td>
+            <td>{{ pr.repo_full_name }}</td>
+            <td>
+              {{ pr.title }}
+              {% if pr.has_conflicts %}
+              <span class="badge danger">Conflict</span>
+              {% endif %}
+              {% if pr.update_branch_available %}
+              <span class="badge">Needs update</span>
+              {% endif %}
+            </td>
+            <td>{{ pr.updated_at|humantime }}</td>
+            <td>{{ pr.status_badge }}</td>
+            <td>
+              {% if pr.problematic_pipelines %}
+              <ul>
+                {% for pipeline in pr.problematic_pipelines %}
+                <li>
+                  <div class="pipeline-row">
+                    <div>
+                      <strong>{{ pipeline.name }}</strong>
+                      <small>{{ pipeline.state }} {{ pipeline.conclusion or '' }}</small>
+                      {% if pipeline.target_url %}
+                      <a href="{{ pipeline.target_url }}" target="_blank">details</a>
+                      {% endif %}
+                    </div>
+                    <form method="post" action="{{ url_for('rerun') }}" class="action-form">
+                      <input type="hidden" name="target" value="{{ active_label }}" />
+                      <input type="hidden" name="repo" value="{{ pr.repo_full_name }}" />
+                      <input type="hidden" name="pr" value="{{ pr.number }}" />
+                      {% if pipeline.suggested_command %}
+                      <input type="hidden" name="command" value="{{ pipeline.suggested_command }}" />
+                      <button type="submit">{{ pipeline.suggested_command }}</button>
+                      {% else %}
+                      <select name="command">
+                        {% for cmd in command_choices %}
+                        <option value="{{ cmd }}">{{ cmd }}</option>
+                        {% endfor %}
+                      </select>
+                      <button type="submit">Trigger</button>
+                      {% endif %}
+                    </form>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <span class="muted">All healthy</span>
+              {% endif %}
+            </td>
+            <td>
+              <form method="post" action="{{ url_for('rebase_rerun') }}" class="action-form">
+                <input type="hidden" name="target" value="{{ active_label }}" />
+                <input type="hidden" name="repo" value="{{ pr.repo_full_name }}" />
+                <input type="hidden" name="pr" value="{{ pr.number }}" />
+                <button type="submit" {% if not pr.update_branch_available %}class="outline"{% endif %}>
+                  Rebase &amp; Rerun
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </main>
+
+  <script>
+    async function handleActionForm(event) {
+      if (!event.target.matches('.action-form')) {
+        return;
+      }
+      event.preventDefault();
+      const form = event.target;
+      const submitButton = form.querySelector('button[type="submit"]');
+      const originalText = submitButton.textContent;
+      submitButton.disabled = true;
+      submitButton.textContent = 'Working...';
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form),
+        });
+        const payload = await response.json();
+        if (payload.status === 'ok') {
+          submitButton.textContent = 'Done';
+        } else {
+          submitButton.textContent = payload.message || 'Failed';
+          submitButton.classList.add('danger');
+        }
+      } catch (err) {
+        console.error(err);
+        submitButton.textContent = 'Error';
+      } finally {
+        setTimeout(() => {
+          submitButton.textContent = originalText;
+          submitButton.disabled = false;
+          submitButton.classList.remove('danger');
+        }, 2000);
+      }
+    }
+
+    document.addEventListener('submit', handleActionForm);
+  </script>
+</body>
+
+</html>
